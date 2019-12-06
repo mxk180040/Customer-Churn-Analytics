@@ -1,18 +1,4 @@
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-
-```{r loadpackages, include=FALSE}
-pacman::p_load(corrr,recipes,dplyr,tidyverse,ggplot2,MASS,tensorflow,dplyr,tidyquant,forcats,keras,yardstick,caTools,lime,cowplot,car,ggcorrplot,pandocfilters)
-search()
-theme_set(theme_classic())
-options(digits = 3)
-
-```
-
-
 ## About the data:
 
 A telecommunications company is concerned about the number of customers leaving their landline business for cable competitors. They need to understand who is leaving. Imagine that you’re an analyst at this company and you have to find out who is leaving and why. I am using Telco Customer Churn dataset by IBM scientists to Predict behavior to retain customers: https://community.ibm.com/community/user/businessanalytics/blogs/steven-macko/2017/06/19/guide-to-ibm-cognos-analytics-sample-data-sets
@@ -61,11 +47,6 @@ Customers that you retain provide valuable feedback, and it’s important that y
 Long-time, loyal customers are far less price-conscious than new customers because they value your company already and, thus, are willing to pay the price for your services. Many customers associate higher prices with quality service and retained customers trust that your company can deliver this quality over competitors.
 
 
-```{r load_data,include=FALSE}
-churn_data<-read.csv("data/Telco-Customer-Churn.csv")
-```
-
-
 ## Data Preprocessing And Exploration
 
 Let's go through the steps to preprocess the data for ML. First, “prune” the data, which is nothing more than removing unnecessary columns and rows. Then I splited the data into training and testing sets. After that, exploration the training set to uncover transformations that will be needed for deep learning.
@@ -74,98 +55,11 @@ Let's go through the steps to preprocess the data for ML. First, “prune” the
 
 The data has 11 NA values all in the “TotalCharges” column. Because it’s such a small percentage of the total population (99.8% complete cases), we can drop these observations with the drop_na() function from tidyr. Note that these may be customers that have not yet been charged, and therefore an alternative is to replace with zero or -99 to segregate this population from the rest.
 
-```{r remove_null,include=FALSE}
-
-churn_data_final <- churn_data %>%
-    drop_na() %>%
-    dplyr::select(Churn, everything())
-
-```
-
 
 ### Exploration
 
 Exploratory data analysis (EDA) is an approach to analyzing data sets to summarize their main characteristics, often with visual methods. A statistical model can be used or not, but primarily EDA is for seeing what the data can tell us beyond the formal modeling or hypothesis testing task.
 
-```{r churn_percent,include=FALSE}
-options(repr.plot.width = 3, repr.plot.height = 2)
-churn_data_final %>% 
-group_by(Churn) %>% 
-summarise(Count = n())%>% 
-mutate(percent = prop.table(Count)*100)%>%
-ggplot(aes(reorder(Churn, -percent), percent), fill = Churn)+
-geom_col(fill = c("Gray", "Black"))+
-geom_text(aes(label = sprintf("%.2f%%", percent)), hjust = 0.01,vjust = -0.5, size =3)+ 
-theme_bw()+  
-xlab("Churn") + 
-ylab("Percent")+
-ggtitle("Churn Percent")
-```
-
-
-
-
-```{r theme,echo=FALSE}
-theme1 <- theme_bw()+
-theme(axis.text.x = element_text(angle = 0, hjust = 1, vjust = 0.5),legend.position="none")
-theme2 <- theme_bw()+
-theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),legend.position="none")
-
-colourfill <-scale_fill_manual(values = c("Gray","Black"))
-```
-
-
-
-```{r churn_plot1,echo=FALSE,fig.height=4}
-options(repr.plot.width = 12, repr.plot.height = 8)
-plot_grid(ggplot(churn_data_final, aes(x=gender,fill=Churn))+ geom_bar()+ theme1+colourfill, 
-          ggplot(churn_data_final, aes(x=SeniorCitizen,fill=Churn))+ geom_bar(position = 'fill')+theme1+colourfill,
-          ggplot(churn_data_final, aes(x=Partner,fill=Churn))+ geom_bar(position = 'fill')+theme1+colourfill,
-          ggplot(churn_data_final, aes(x=Dependents,fill=Churn))+ geom_bar(position = 'fill')+theme1+colourfill,
-          ggplot(churn_data_final, aes(x=PhoneService,fill=Churn))+ geom_bar(position = 'fill')+theme1+colourfill,
-          ggplot(churn_data_final, aes(x=MultipleLines,fill=Churn))+ geom_bar(position = 'fill')+theme1+colourfill+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10)),
-          align = "h")
-
-```
-
-
-
-```{r churn_plot2,echo=FALSE,fig.height=4}
-options(repr.plot.width = 12, repr.plot.height = 8)
-plot_grid(ggplot(churn_data_final, aes(x=InternetService,fill=Churn))+ geom_bar(position = 'fill')+ theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill, 
-          ggplot(churn_data_final, aes(x=OnlineSecurity,fill=Churn))+ geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=OnlineBackup,fill=Churn))+ geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=DeviceProtection,fill=Churn))+ geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=TechSupport,fill=Churn))+ geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=StreamingTV,fill=Churn))+ geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          align = "h")
-```
-
-
-
-```{r churn_plot3,echo=FALSE,fig.height=4}
-plot_grid(ggplot(churn_data_final, aes(x=StreamingMovies,fill=Churn))+ 
-          geom_bar(position = 'fill')+ theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill, 
-          ggplot(churn_data_final, aes(x=Contract,fill=Churn))+ 
-          geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=PaperlessBilling,fill=Churn))+ 
-          geom_bar(position = 'fill')+theme1+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          ggplot(churn_data_final, aes(x=PaymentMethod,fill=Churn))+
-          geom_bar(position = 'fill')+theme_bw()+
-          scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+colourfill,
-          align = "h")
-
-```
 
 * Churn columns tells us about the number of Customers who left within the last month. Around 26% of customers left the platform within the last month.  
 * Gender - The churn percent is almost equal in case of Male and Females.  
@@ -182,12 +76,6 @@ plot_grid(ggplot(churn_data_final, aes(x=StreamingMovies,fill=Churn))+
 
 Split the data with training and testing sets using sample.split. Training set will have 80% of dataset and testing set will have 20%.
 
-```{r Data_partition,include=FALSE}
-set.seed(123)
-train_index <- sample.split(churn_data_final$Churn, SplitRatio = 0.8)
-churn_train_with_ids <- churn_data_final[train_index, ]
-churn_test_with_ids <- churn_data_final[-train_index,  ]
-```
 
 ### Data Transformation
 
@@ -201,19 +89,6 @@ Artificial Neural Networks are best when the data is one-hot encoded, scaled and
 
 **FEATURE SCALING:** ANN’s typically perform faster and often times with higher accuracy when the features are scaled and/or normalized (aka centered and scaled, also known as standardizing).
 
-```{r correlate,include=FALSE}
-churn_train <- dplyr::select(churn_train_with_ids, -customerID)
-churn_test <- dplyr::select(churn_test_with_ids, -customerID)
-churn_train %>%
-    dplyr::select(Churn, TotalCharges) %>%
-    mutate(
-        Churn = Churn %>% as.factor() %>% as.numeric(Churn),
-        LogTotalCharges = log(TotalCharges)
-    ) %>%
-    correlate() %>%
-    focus(Churn) %>%
-    fashion()
-```
 
 
 #### Preprocessing with Recipes
@@ -229,26 +104,7 @@ For our model, we use:
 5. step_scale() to scale the data.
 
 
-```{r recipe,include=FALSE}
-# Create recipe
-rec_obj <- recipe(Churn ~ ., data = churn_train) %>%
-    step_discretize(tenure, options = list(cuts = 6)) %>%
-    step_log(TotalCharges) %>%
-    step_dummy(all_nominal(), -all_outcomes()) %>%
-    step_center(all_predictors(), -all_outcomes()) %>%
-    step_scale(all_predictors(), -all_outcomes()) %>%
-    prep(data = train_tbl)
-
-x_churn_train <- bake(rec_obj, new_data = churn_train) %>% dplyr::select(-Churn)
-x_churn_test  <- bake(rec_obj, new_data = churn_test) %>% dplyr::select(-Churn)
-
-y_churn_train <- ifelse(pull(churn_train, Churn) == 'Yes', 1, 0)
-y_churn_test  <- ifelse(pull(churn_test, Churn) == 'Yes', 1, 0)
-```
-
 ## Building A Deep Learning Model
-
-![Alt Text](images/ANN.jpg)
 
 
 **Build a three-layer MLP with keras.**
@@ -263,69 +119,8 @@ Output Layer: The output layer specifies the shape of the output and the method 
 
 3. Compile the model: The last step is to compile the model with compile(). We’ll use optimizer = "adam", which is one of the most popular optimization algorithms. We select loss = "binary_crossentropy" since this is a binary classification problem. We’ll select metrics = c("accuracy") to be evaluated during training and testing. Key Point: The optimizer is often included in the tuning process.
 
-```{r model,include=FALSE}
-#model_keras <- keras.engine.sequential.Sequential()
-model_keras <- keras_model_sequential()
-#class(model_keras)
-
-model_keras %>% 
-    # First hidden layer
-    layer_dense(
-        units              = 16, 
-        kernel_initializer = "uniform", 
-        activation         = "relu", 
-        input_shape        = ncol(x_churn_train)) %>% 
-    # Dropout to prevent overfitting
-    layer_dropout(rate = 0.1) %>%
-    # Second hidden layer
-    layer_dense(
-        units              = 16, 
-        kernel_initializer = "uniform", 
-        activation         = "relu") %>% 
-    # Dropout to prevent overfitting
-    layer_dropout(rate = 0.1) %>%
-    # Output layer
-    layer_dense(
-        units              = 1, 
-        kernel_initializer = "uniform", 
-        activation         = "sigmoid") %>% 
-    # Compile ANN
-    compile(
-        optimizer = 'adam',
-        loss      = 'binary_crossentropy',
-        metrics   = 'accuracy'
-    )
-
-```
-
-
-```{r fit,include=FALSE}
-# Fit the keras model to the training data
-history <- fit(
-    object           = model_keras, 
-    x                = as.matrix(x_churn_train), 
-    y                = y_churn_train,
-    batch_size       = 50, 
-    epochs           = 35,
-    validation_split = 0.30,
-    verbose = 0
-)
-
-# save the model
-save_model_hdf5(model_keras, 'model/customer_churn.hdf5')
-```
-
-
 Visualize the Keras training history using the plot() function.Validation accuracy and loss leveling off, which means the model has completed training. There is some divergence between training loss/accuracy and validation loss/accuracy. The model indicates that training can be stopped at an earlier epoch.  Use enough epochs to get a high validation accuracy. Once validation accuracy curve begins to flatten or decrease, training should be stopped.
 
-```{r training_plot,echo=FALSE}
-plot(history) +
-    theme_tq() +
-    scale_color_tq() +
-    scale_fill_tq() +
-    labs(title = "Deep Learning Training Results")
-
-```
 
 
 ### Prediction
@@ -335,22 +130,7 @@ Predictions can be made from  keras model on the test data set, which was unseen
 *predict_classes(): Generates class values as a matrix of ones and zeros. Converted the output to a vector as I am dealing with binary classification.
 *predict_proba(): Generates the class probabilities as a numeric matrix indicating the probability of being a class. Converted to a numeric vector because there is only one column output.
 
-```{r predict,include=FALSE}
-# Predicted Class
-yhat_keras_class_vec <- predict_classes(object = model_keras, x = as.matrix(x_churn_test)) %>%
-    as.vector()
-# Predicted Class Probability
-yhat_keras_prob_vec  <- predict_proba(object = model_keras, x = as.matrix(x_churn_test)) %>%
-    as.vector()
 
-estimates_keras_tbl <- tibble(
-    truth      = as.factor(y_churn_test) %>% fct_recode(yes = "1", no = "0"),
-    estimate   = as.factor(yhat_keras_class_vec) %>% fct_recode(yes = "1", no = "0"),
-    class_prob = yhat_keras_prob_vec
-)
-
-estimates_keras_tbl
-```
 
 ### Model Metrics
 
@@ -360,49 +140,6 @@ estimates_keras_tbl
 * PRECISION AND RECALL: Precision is when the model predicts “yes”, how often is it actually “yes”. Recall (also true positive rate or specificity) is when the actual value is “yes” how often is the model correct. 
 * F1 SCORE: Calculate the F1-score, which is a weighted average between the precision and recall.
 
-```{r estimate,include=FALSE}
-
-estimates_keras_tbl %>% conf_mat(truth, estimate)
-
-estimates_keras_tbl %>% metrics(truth, estimate)
-
-estimates_keras_tbl %>% roc_auc(truth, class_prob)
-
-options(yardstick.event_first = FALSE)
-# Precision
-tibble(
-    precision = estimates_keras_tbl %>% precision(truth, estimate),
-    recall    = estimates_keras_tbl %>% recall(truth, estimate)
-)
-
-# F1-Statistic
-estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
-```
-
-```{r prob,include=FALSE}
-
-model_type.keras.engine.sequential.Sequential <- function(x, ...) {
-   "classification"
-}
-
-#model_type.keras.models.Sequential ,model_type.keras.engine.sequential.Sequential
-#predict_model.keras.models.Sequential ,predict_model.keras.engine.sequential.Sequential
-predict_model.keras.engine.sequential.Sequential <- function(x, newdata, type, ...) {
-    pred <- predict_proba(object = x, x = as.matrix(newdata))
-    data.frame(Yes = pred, No = 1 - pred)
-}
-
-# Test our predict_model() function
-predictions <- predict_model(x = model_keras, newdata = x_churn_test, type = 'raw') %>%
-    tibble::as_tibble()
-
-churn_test_with_ids$churn_prob <- predictions$Yes
-```
-
-
-```{r save,include=FALSE}
-save(list = ls(), file = 'data/customer_churn.RData')
-```
 
 
 ## Recommendation for Customer Retention Using Shiny
@@ -439,7 +176,6 @@ Churn probability is provided based on various feature. Developed a Recommendati
   + Startegy 1: If customers are using Payment Methods like Mailed Check and Electronic Check, then **Move to credit card or bank transfer**
   + Strategy 2: Customers not falling in above categories are less likely to churn, then **Retain and Maintain**
 
-![Alt Text](images/customer_retention.jpg)
 
 
 
