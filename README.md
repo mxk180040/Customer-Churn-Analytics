@@ -1,16 +1,3 @@
----
-title: "Customer Churn Rate Prediction and Recommendation For Retention"
-author: "Mukil Raj Kannan"
-output:
-  pdf_document:
-    toc: yes
-  html_document:
-    theme: readable
-    toc: yes
-subtitle: Using Deep Learning with Keras
-editor_options:
-  chunk_output_type: console
----
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -37,7 +24,6 @@ Customer account information – how long they’ve been a customer, contract, p
 Demographic info about customers – gender, age range, and if they have partners and dependents
 
 
-![Customer Churn](images/customer_churn.jpg)
 
 ## Customer attrition
 Customer attrition, also known as customer churn, customer turnover, or customer defection, is the loss of clients or customers.
